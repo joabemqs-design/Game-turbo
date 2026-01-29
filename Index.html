@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game Turbo Neon</title>
+
+<style>
+:root{
+  --neon:#00eaff;
+  --bg:#02040a;
+  --card:#06101f;
+  --glow:0 0 15px #00eaff88;
+}
+
+body{
+  margin:0;
+  background:var(--bg);
+  font-family:Arial;
+  color:white;
+  touch-action:manipulation;
+  overflow:hidden;
+}
+
+header{
+  text-align:center;
+  padding:18px;
+  font-size:22px;
+  color:var(--neon);
+  text-shadow:var(--glow);
+  border-bottom:1px solid #00eaff33;
+}
+
+.tabs{display:flex;background:#050b18}
+.tab{flex:1;padding:14px;text-align:center;color:#777;cursor:pointer}
+.tab.active{color:var(--neon);border-bottom:2px solid var(--neon);text-shadow:var(--glow)}
+
+.container{padding:15px;overflow:auto;height:calc(100vh - 120px)}
+
+.card{
+  background:var(--card);
+  padding:15px;
+  border-radius:12px;
+  border:1px solid #00eaff33;
+  box-shadow:0 0 20px #000;
+  margin-bottom:15px;
+}
+
+.switch{
+  display:flex;justify-content:space-between;align-items:center;margin:12px 0
+}
+.switch input{
+  appearance:none;width:50px;height:26px;background:#00eaff33;
+  border-radius:20px;position:relative;cursor:pointer
+}
+.switch input:checked{background:var(--neon);box-shadow:var(--glow)}
+.switch input::before{
+  content:"";position:absolute;width:22px;height:22px;background:black;
+  border-radius:50%;top:2px;left:2px;transition:.2s
+}
+.switch input:checked::before{transform:translateX(24px)}
+
+button{
+  width:100%;padding:14px;background:transparent;border:1px solid var(--neon);
+  color:var(--neon);border-radius:8px;margin-top:15px;cursor:pointer;
+  box-shadow:var(--glow)
+}
+
+input[type=range]{
+  width:100%;appearance:none;height:6px;background:#00eaff44;border-radius:10px
+}
+input[type=range]::-webkit-slider-thumb{
+  appearance:none;width:22px;height:22px;background:var(--neon);
+  border-radius:50%;box-shadow:var(--glow)
+}
+
+.value{text-align:right;color:#aaa}
+.status{color:#00ffcc;font-size:14px}
+
+/* LOADING */
+.loading{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  background:#000c;display:none;align-items:center;justify-content:center;
+  z-index:9999;flex-direction:column
+}
+.loading span{margin-top:10px;color:var(--neon)}
+.bar{
+  width:70%;height:10px;background:#00eaff33;border-radius:10px;overflow:hidden
+}
+.bar div{
+  height:100%;width:0%;background:var(--neon);box-shadow:var(--glow)
+}
+</style>
+</head>
+<body>
+
+<div class="loading" id="load">
+  <div class="bar"><div id="bar"></div></div>
+  <span id="percent">Configurando 0%</span>
+</div>
+
+<header>⚡ GAME TURBO by joabe</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="tab(0)">Game Turbo</div>
+  <div class="tab" onclick="tab(1)">Toque</div>
+</div>
+
+<div class="container" id="t0">
+
+  <div class="card">
+    <h3>🚀 Otimizações</h3>
+
+    <div class="switch"><span>Não Perturbe</span><input type="checkbox" onchange="inject('dnd')"></div>
+    <div class="switch"><span>Otimizar Memória</span><input type="checkbox" onchange="inject('mem')"></div>
+    <div class="switch"><span>Otimizar Wi-Fi</span><input type="checkbox" onchange="inject('net')"></div>
+    <div class="switch"><span>Modo Jogo</span><input type="checkbox" onchange="inject('game')"></div>
+
+    <button onclick="injectAll()">💉 INJETAR TUDO NO DISPOSITIVO</button>
+  </div>
+
+  <div class="card"><div id="status" class="status">Aguardando...</div></div>
+
+</div>
+
+<div class="container" id="t1" style="display:none">
+
+  <div class="card">
+    <h3>📱 Calibração do Toque</h3>
+    <input type="range" min="1" max="27" value="10" id="c1">
+    <div class="value"><span id="v1">10</span></div>
+  </div>
+
+  <div class="card">
+    <h3>⚡ Resposta do Toque</h3>
+    <input type="range" min="150" max="300" value="250" id="c2">
+    <div class="value"><span id="v2">250</span> ms</div>
+  </div>
+
+  <div class="card">
+    <h3>🖐️ Velocidade do Arrasto</h3>
+    <input type="range" min="1" max="17" value="7" id="c3">
+    <div class="value"><span id="v3">7</span></div>
+  </div>
+
+  <button onclick="injectTouch()">💉 INJETAR TOQUE NO DISPOSITIVO</button>
+
+</div>
+
+<script>
+function tab(i){
+  document.querySelectorAll(".tab").forEach((t,n)=>t.classList.toggle("active",n===i))
+  t0.style.display=i===0?"block":"none"
+  t1.style.display=i===1?"block":"none"
+}
+
+function loading(cb){
+  let p=0;load.style.display="flex"
+  let int=setInterval(()=>{
+    p+=4;bar.style.width=p+"%";percent.innerText="Configurando "+p+"%"
+    if(p>=100){clearInterval(int);setTimeout(()=>{
+      load.style.display="none";cb()
+    },200)}
+  },120)
+}
+
+function inject(type){
+  loading(()=>{
+    if(type==="dnd" && "Notification" in window) Notification.requestPermission()
+    if(type==="mem" && window.gc) window.gc()
+    if(type==="net" && navigator.connection) status.innerText="Rede: "+navigator.connection.effectiveType
+    if(type==="game"){
+      document.documentElement.requestFullscreen()
+      if(navigator.wakeLock) navigator.wakeLock.request("screen")
+    }
+    status.innerText = type+" configurado com sucesso"
+  })
+}
+
+function injectAll(){
+  loading(()=>{
+    document.documentElement.requestFullscreen()
+    if(navigator.wakeLock) navigator.wakeLock.request("screen")
+    status.innerText="Tudo injetado com sucesso"
+  })
+}
+
+function injectTouch(){
+  loading(()=>{
+    document.body.style.touchAction="manipulation"
+    document.body.style.overscrollBehavior="none"
+    localStorage.setItem("touch",JSON.stringify({c1:c1.value,c2:c2.value,c3:c3.value}))
+    status.innerText="Toque injetado com sucesso"
+  })
+}
+
+c1.oninput=()=>v1.innerText=c1.value
+c2.oninput=()=>v2.innerText=c2.value
+c3.oninput=()=>v3.innerText=c3.value
+</script>
+
+</body>
+</html>
